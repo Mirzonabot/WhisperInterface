@@ -9,6 +9,12 @@ Whisper is an intuitive and powerful transcription service, capable of transcrib
 3. Provides results in a downloadable PDF format or copied to the clipboard.
 4. Website designed with a responsive interface.
 
+## Preview
+
+Here is a quick preview of our application in action:
+
+![Whisper Transcription Service Preview](interface_files/whisper_UI_preview-_1_.gif "Whisper Preview")
+
 ## Getting Started
 
 Here's a step-by-step guide to setting up and running the Whisper application on your machine.
