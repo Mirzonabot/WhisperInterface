@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> {{ _('Audio Transcription')}}</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <style>
+        .lds-ring {
+            display: inline-block;
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .lds-ring div {
+            box-sizing: border-box;
+            display: block;
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            margin: 8px;
+            border: 8px solid #000;
+            border-radius: 50%;
+            animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+            border-color: #000 transparent transparent transparent;
+        }
+
+        .lds-ring div:nth-child(1) {
+            animation-delay: -0.45s;
+        }
+
+        .lds-ring div:nth-child(2) {
+            animation-delay: -0.3s;
+        }
+
+        .lds-ring div:nth-child(3) {
+            animation-delay: -0.15s;
+        }
+
+        @keyframes lds-ring {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .action-buttons {
+
+            margin-top: 20px;
+
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mt-5">
+            <h1 class="text-primary">{{_('Welcome to Audio Transcription')}}</h1>
+            <form action="/delete_key">
+                <button type="submit" class="btn btn-danger">{{_('Delete Key')}}</button>
+            </form>
+        </div>
+    </div>
+    {% if 'key' not in session %}
+    <!-- The Modal -->
+    <div class="modal" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"
+        data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title">{{_('Enter the OpenAI Key')}}</h4>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body">
+                    <form method="post">
+                        <div class="form-group">
+                            <label for="key">Key:</label>
+                            <input type="text" class="form-control" id="key" name="key">
+                        </div>
+                        <button type="submit" class="btn btn-primary">{{_('Save Key')}}</button>
+                    </form>
+                </div>
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <p>{{_('Your key is safe in the session, and you can delete it.')}}</p>
+                    <br>
+                    {% if error %}
+                    <p class="text-danger">{{ error }}</p>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="container mt-5">
+        <form method="POST" action="/transcribe" enctype="multipart/form-data" id="transcription">
+            <div class="custom-file">
+                <input type="file" class="custom-file-input" id="audioFile" name="audioFile" accept="audio/*"
+                    onchange="updateLabel()">
+                <label class="custom-file-label" for="audioFile" id="audioFileLabel">{{_('Choose file')}}</label>
+            </div>
+            <button type="submit" class="btn btn-primary mt-2">{{_('Transcribe Audio')}}</button>
+        </form>
+        <div id="transcription-container">
+            <div class="action-buttons">
+                <button id="copyButton">{{_('Copy')}}</button>
+                <button id="pdfButton">{{_('Export PDF')}}</button>
+            </div>
+            <h3 class="mt-3">{{_('Transcription Result:')}}</h3>
+
+
+            <p id="transcription1">{{_('Your text here...')}}</p>
+        </div>
+
+    </div>
+    {% endif %}
+
+
+
+
+    <div class="modal" tabindex="-1" role="dialog" id="loader" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered text-center">
+            <div class="modal-content bg-transparent border-0">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">{{_('Loading...')}}</span>
+                    <div id="loader1" class="lds-ring">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+
+                    <p class="text-white">{{_('Transcribing ....')}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Bootstrap JavaScript and jQuery libraries -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.debug.js"></script>
+
+    <!-- Script to automatically open modal -->
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#myModal').modal('show');
+        });
+
+        document.getElementById('transcription').addEventListener('submit', function (e) {
+            e.preventDefault();  // Prevent the default form submission
+
+            var audio = document.getElementById('audioFile').files[0];
+            console.log("Audio: " + audio);
+
+            // Validate file size
+            var maxSizeMB = 25;
+            var maxSize = maxSizeMB * 1024 * 1024;  // Size in bytes
+
+            if (audio.size > maxSize) {
+                alert("File size must be less than " + maxSizeMB + " MB.");
+                return;
+            }
+
+            $('#loader').modal('show');
+
+
+            var formData = new FormData();
+            formData.append('audioFile', audio);
+
+            fetch('/transcribe', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data),
+                        //make the transcription-container visible
+                        $('#loader').modal('hide'),
+                        $('#transcription1').html(data.transcription)
+                }
+                )
+                .catch((error) => console.error('Error:', error));
+        });
+
+
+        document.getElementById('copyButton').addEventListener('click', function () {
+            let transcription = document.getElementById('transcription1').innerText;
+            navigator.clipboard.writeText(transcription);
+        });
+
+        document.getElementById('pdfButton').addEventListener('click', function () {
+            let transcription = document.getElementById('transcription1').innerText;
+            let doc = new jsPDF();
+            let pageHeight = doc.internal.pageSize.getHeight();
+            let pageWidth = doc.internal.pageSize.getWidth();
+
+            doc.setFontSize(12); // Set the font size you desire
+
+            // Split the text into lines so that it doesn't overflow the PDF page.
+            let lines = doc.splitTextToSize(transcription, pageWidth - 20); // Subtracting 20 to account for margins
+
+            let lineHeight = doc.getLineHeight(); // Get line height
+            let linesPerPage = (pageHeight - 250); // Calculate the number of lines per page, -20 for margins
+
+            // Loop through all lines and add a new page if the line exceeds the number of lines per page
+            for (let j = 0; j < lines.length; j += linesPerPage) {
+                let linesForCurrentPage = lines.slice(j, j + linesPerPage);
+
+                doc.text(linesForCurrentPage, 10, 10); // Draw the lines on the current page
+
+                if (j < lines.length - 1) {
+                    doc.addPage(); // Only add a new page if there will be more lines.
+                }
+            }
+
+            doc.save("transcription.pdf");
+        });
+
+        function updateLabel() {
+            let inputFile = document.getElementById('audioFile');
+            let label = document.getElementById('audioFileLabel');
+            let fileName = inputFile.files[0].name;
+            label.innerText = fileName;
+        }
+
+
+
+
+    </script>
+</body>
+
+</html>
